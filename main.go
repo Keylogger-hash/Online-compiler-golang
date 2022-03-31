@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"net/http"
 )
 
 type Manager struct {
@@ -26,20 +27,16 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	for i := 0; i < 1000; i++ {
-		go func() {
-			text := "package main\nimport \"fmt\"\nfunc main(){\n	fmt.Println(\"I am was writing\")\n}"
-			WriteCodeFile([]byte(text))
-			pathCompile := currDir + "/tmp/main.go"
-			cmd := exec.Command("/opt/homebrew/bin/go", "run", pathCompile)
-			output, err := cmd.CombinedOutput()
-			if err != nil {
-				fmt.Println(err)
-			}
-			fmt.Println(string(output))
-		}()
-
+	text := "package main\nimport \"fmt\"\nfunc main(){\n	fmt.Println(\"I am was writing\")\n}"
+	WriteCodeFile([]byte(text))
+	pathCompile := currDir + "/tmp/main.go"
+	cmd := exec.Command("/opt/homebrew/bin/go", "run", pathCompile)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println(err)
 	}
+	fmt.Println(string(output))
 	fmt.Scanln()
 	fmt.Println("Process finished!")
+	http.ListenAndServe("localhost:8080",nil)
 }
