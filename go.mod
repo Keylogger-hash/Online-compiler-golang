@@ -1,3 +1,3 @@
-module golang-online-compiler
+module compiler.com
 
 go 1.17

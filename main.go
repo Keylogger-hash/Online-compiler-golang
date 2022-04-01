@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 	"io/fs"
+	"net/http"
 	"os"
 	"os/exec"
-	"net/http"
+	"compiler.com/handlers"
 )
 
 type Manager struct {
@@ -21,8 +22,7 @@ func WriteCodeFile(text []byte) {
 		fmt.Println(err)
 	}
 }
-
-func main() {
+func ExecCode() []byte{
 	currDir, err := os.Getwd()
 	if err != nil {
 		fmt.Println(err)
@@ -32,11 +32,15 @@ func main() {
 	pathCompile := currDir + "/tmp/main.go"
 	cmd := exec.Command("/opt/homebrew/bin/go", "run", pathCompile)
 	output, err := cmd.CombinedOutput()
+	return output
+}
+func main() {
+	currDir, err := os.Getwd()
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(string(output))
-	fmt.Scanln()
-	fmt.Println("Process finished!")
+	fmt.Println(currDir)
+	http.HandleFunc("/",handlers.HandleIndex)
 	http.ListenAndServe("localhost:8080",nil)
+
 }
