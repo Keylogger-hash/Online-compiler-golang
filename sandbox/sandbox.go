@@ -2,8 +2,13 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
 	"os/exec"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -14,15 +19,18 @@ const (
 	memLimitBytes = 100 << 20
 )
 
-type Sandbox struct {
-}
+var httpServer *http.Server
 
 type Container struct {
+	Name string
+
+	Stdout []byte
+	Stderr []byte
+	Stdin  []byte
+
+	Cmd *exec.Cmd
 }
 
-func buildCode() {
-
-}
 func ListContainers() {
 	cmd := exec.Command("sudo", "docker", "ps", "--format", "'{{json .}}'", "-a")
 	output, err := cmd.Output()
@@ -31,26 +39,61 @@ func ListContainers() {
 	}
 	fmt.Println(string(output))
 }
-func buildContainer(){
-	nameContainer  := "main_"+time.Now().String()
-	cmd := exec.Command("sudo","docker","build","-it",nameContainer,".")
+func (c *Container) buildContainer(data []byte) ([]byte, error) {
+	uid := uuid.New().String()
+	nameContainer := "main_" + uid
+	fileName := nameContainer + ".go"
+	c.Name = nameContainer
+	argName := fmt.Sprintf("NameFile=%s", nameContainer)
+	file, err := os.Create("tmp/" + fileName)
+	file.Write(data)
+	cmd := exec.Command("sudo", "docker", "build", ".", "-t", nameContainer, "--build-arg", argName)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println(output)
+		fmt.Println(string(output))
 	}
 	fmt.Println(string(output))
+	return output, nil
 }
-func StartContainer(){
-	
+func (c *Container) StartContainer() ([]byte, error) {
+	cmdStr := fmt.Sprintf("docker run -i %s", c.Name)
+	cmd := exec.Command("/bin/bash", "-c", cmdStr)
+	fmt.Println(cmd)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil,err
+	}
+	return output, nil
 }
-func RunCode() {
-	cmd := exec.Command("./main")
-	out, err := cmd.CombinedOutput()
+
+func handleMain(wr http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(wr, r)
+		return
+	}
+	wr.Write([]byte("Everthing okay!"))
+}
+func handleRun(wr http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+
+	default:
+		wr.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+func main() {
+	c := &Container{}
+	file, err := ioutil.ReadFile("tmp/main.go")
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(string(out))
-}
-func main() {
-	buildContainer()
+	c.buildContainer(file)
+	fmt.Println("Container build")
+	data, err := c.StartContainer()
+	
+	fmt.Println(string(data))
+	// mux := http.NewServeMux()
+	// mux.HandleFunc("/", handleMain)
+	// mux.HandleFunc("/run",handleRun)
+	// http.ListenAndServe("localhost:8081", mux)
 }
