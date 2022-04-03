@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ace.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/snippets/golang.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/mode-golang.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.14/ext-language_tools.min.js"></script>
+        <script src="/static/js/ace-builds/src-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+        <script src="/static/js/ace-builds/src-noconflict/ext-language_tools.js"></script>
+        <script src="/static/js/ace-builds/src-noconflict/snippets/golang.js"></script>
+        <script src="static/js/ace-builds/src-noconflict/mode-golang.js"></script>
     </head>
     <body>
         <div style="background-color:#fff;">
             <div class="block-left" style="width:60%;height:700px;float:left">
                 <p>Code</p>
                 <div style="display:inline-block; padding-bottom: 1em;">
-                    <button style="align-items: center;
+                    <button id="run-code" style="align-items: center;
                     background-color: #ffffdd;;
                     border: none;
                     border-radius: 0.1875rem;
@@ -26,7 +26,7 @@
                     justify-content: center;
                     min-width: 4.063rem;
                     text-decoration: none;">Run</button>
-                    <button style="align-items: center;
+                    <button id="format-code" style="align-items: center;
                     background-color: #ffffdd;;
                     border: none;
                     border-radius: 0.1875rem;
@@ -110,33 +110,19 @@
                 </div>
                 <div style="background-color: #f8f8f8; box-sizing:border-box;width:95%;height:80%">
                     <pre>
-                        <span><p>Hello world!</p></span>
+                        <!-- <span class="stdout"><p>Hello world!</p></span> -->
+                        <span class="stderr" ><p class="stderr"  id="#stderr"> Program exited.</span>
                     </pre>
-                    <!-- <pre>
-                        <span class="stderr">Hello world</span>
-                        <span class="stdout"></span>
-                    </pre> -->
                 </div>
             </div>
         </div>
         
-        <!-- <div style="border-bottom-right-radius: 0.3125rem;
-                border-bottom-left-radius: 0.3125rem;
-                border-top: none !important;
-                padding: 0.625rem;
-                height: 5rem;
-                margin-bottom: 1rem;
-                overflow: auto;
-                background-color: #f8f8f8;
-                border: #c6c8ca;
-                resize: vertical;">
-                    <pre>
-                        <span class="stderr"> Help</span>
-                        <span class="stdout">wewpopoekwpok</span>
-                    </pre>
-                </div>  -->
+        
         <script>
             var editor = ace.edit("editor");
+            var button = document.querySelector("#format-code")
+            
+
             editor.setTheme("ace/theme/monokai");
             editor.setOptions({
                 enableLiveAutocompletion: true,
@@ -144,6 +130,28 @@
                 enableBasicAutocompletion: true
             })
             editor.session.setMode("ace/mode/golang");
+            button.onclick = function() {
+                var text = editor.session.getValue();
+                var data = {
+                    Body:text
+                }
+                var Data = {
+                    headers: {
+                        "Content-type":"application/json",
+                    },
+                    body:JSON.stringify(data),
+                    method:"POST"
+                }
+                fetch("/fmt",Data).then(response => response.json()).then((data) => {
+                    console.log(data)
+                    if (data["Error"] !== "" ){
+                        var output = document.querySelectorAll("p.stderr")[0];
+                        output.textContent = data["Error"]
+                    } else {
+                        editor.session.setValue(data["Body"],-1)
+                    }
+                });
+            }
         </script>
 
     </body>

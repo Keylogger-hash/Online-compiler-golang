@@ -24,16 +24,27 @@ func buildCode() {
 
 }
 func ListContainers() {
-	cmd := exec.Command("docker", "ps", "--format", "'{{json .}}'", "-a")
+	cmd := exec.Command("sudo", "docker", "ps", "--format", "'{{json .}}'", "-a")
 	output, err := cmd.Output()
 	if err != nil {
 		fmt.Println(err)
 	}
 	fmt.Println(string(output))
 }
-
+func buildContainer(){
+	nameContainer  := "main_"+time.Now().String()
+	cmd := exec.Command("sudo","docker","build","-it",nameContainer,".")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Println(output)
+	}
+	fmt.Println(string(output))
+}
+func StartContainer(){
+	
+}
 func RunCode() {
-	cmd := exec.Command("./main.exe")
+	cmd := exec.Command("./main")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Println(err)
@@ -41,6 +52,5 @@ func RunCode() {
 	fmt.Println(string(out))
 }
 func main() {
-	RunCode()
-
+	buildContainer()
 }
