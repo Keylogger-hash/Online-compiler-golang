@@ -120,8 +120,9 @@
         
         <script>
             var editor = ace.edit("editor");
-            var button = document.querySelector("#format-code")
-            
+            var buttonFormatCode = document.querySelector("#format-code")
+            var buttonRunCode = document.querySelector("#run-code")
+
 
             editor.setTheme("ace/theme/monokai");
             editor.setOptions({
@@ -130,7 +131,32 @@
                 enableBasicAutocompletion: true
             })
             editor.session.setMode("ace/mode/golang");
-            button.onclick = function() {
+            buttonRunCode.onclick = function(){
+                var text = editor.session.getValue();
+                var stderr = document.querySelectorAll("p.stderr")[0];
+                var stdout = document.querySelectorAll("p.stdout")[0];
+
+                var data = {
+                    Body:text
+                }
+                var Data = {
+                    headers: {
+                        "Content-type":"application/json",
+                    },
+                    body:JSON.stringify(data),
+                    method:"POST"
+                }
+                stdout.textContent = "Waiting remote server ..."
+                fetch("/compile",Data).then(response => response.json()).then((data) => {
+                    console.log(data)
+                    if (data["Error"] !== "" ){
+                        stderr.textContent = data["Error"]
+                    } else {
+                        stdout.textContent = data["Res"]
+                    }
+                });
+            }
+            buttonFormatCode.onclick = function() {
                 var text = editor.session.getValue();
                 var data = {
                     Body:text

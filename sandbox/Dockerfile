@@ -6,7 +6,7 @@ RUN apk add bash && ls -a
 COPY tmp/$NameFile.go /go/bin/$NameFile.go
 RUN mv /go/bin/${NameFile}.go /go/bin/main.go
 WORKDIR "/go/bin"
-RUN go build main.go
+RUN go build main.go && chmod +x main
 
 
 
@@ -18,4 +18,4 @@ ARG NameFile
 
 COPY --from=golang-builder /go/bin/main /go/bin/main
 WORKDIR "/go/bin"
-CMD ["/go/bin/main"]
+ENTRYPOINT ["./main"]

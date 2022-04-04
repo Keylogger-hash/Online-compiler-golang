@@ -11,7 +11,7 @@ import (
 )
 
 type Response struct {
-	Body  string
+	Res  string
 	Error string
 }
 
@@ -24,9 +24,9 @@ func HandleFmt(wr http.ResponseWriter, r *http.Request) {
 			http.Error(wr, fmt.Sprintf("%v", err), http.StatusBadRequest)
 		}
 		json.Unmarshal(buf,rsp)
-		formatBody, err1  := formatFmt(rsp.Body)
+		formatBody, err1  := formatFmt(rsp.Res)
 		wr.Header().Add("Content-type","application/json")
-		rsp.Body = string(formatBody)
+		rsp.Res = string(formatBody)
 		if err1 != nil {
 			rsp.Error = fmt.Sprintf("%v",err1)
 		} else {
