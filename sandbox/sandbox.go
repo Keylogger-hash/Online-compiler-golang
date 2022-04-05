@@ -56,7 +56,8 @@ func (c *Container) buildContainer(data []byte) ([]byte, error) {
 	file, err := os.Create("tmp/" + fileName)
 	file.Write(data)
 	defer file.Close()
-	cmd := exec.Command("docker", "build", ".", "-t", nameContainer, "--build-arg", argName)
+	cmd := exec.Command("sudo","docker", "build", ".", "-t", nameContainer, "--build-arg", argName)
+	fmt.Println(cmd)
 	output, err := cmd.Output()
 	if err != nil {
 		fmt.Println(string(output))
@@ -65,7 +66,7 @@ func (c *Container) buildContainer(data []byte) ([]byte, error) {
 	return output, nil
 }
 func (c *Container) StartContainer() ([]byte, error) {
-	cmd := exec.Command("docker","run","-i",c.Name)
+	cmd := exec.Command("sudo","docker","run","-i",c.Name)
 	fmt.Println(cmd)
 	output, err := cmd.Output()
 	if err != nil {
@@ -129,4 +130,4 @@ func main() {
 	mux.HandleFunc("/", handleMain)
 	mux.HandleFunc("/run", handleRun)
 	http.ListenAndServe("localhost:8081", mux)
-}
+ }
