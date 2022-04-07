@@ -1,4 +1,4 @@
-package main
+package utils
 
 import (
 	"bytes"
@@ -7,9 +7,9 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"io"
 	"io/fs"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 
@@ -17,75 +17,84 @@ import (
 	"golang.org/x/tools/imports"
 )
 
-type Code struct {
+type BuildResults struct {
+	pathCompile string
+	pathOutput  string
+	Data        []byte
+	Stdout      io.ReadCloser
+	Stderr      io.ReadCloser
+	Errors      error
+	Events      []string
 }
 
-func CheckCodePackageIsMain(fdata []byte) (bool, error) {
+func NewBuildResult() *BuildResults {
+	return &BuildResults{}
+}
+func CheckCodePackageIsMain(build *BuildResults)  {
 	fset := token.NewFileSet()
-
-	file, err := parser.ParseFile(fset, "", fdata, parser.AllErrors)
+	file, err := parser.ParseFile(fset, "", build.Data, parser.AllErrors)
 	if err != nil {
-		return false, err
+		build.Errors = err
+		return 
 	}
 	if file.Name.Name != "main" {
-		return false, nil
+		build.Errors = fmt.Errorf("package is not main")
+		return 
 	}
-	return true, nil
+	return 
 }
-func FormatFmt(body string) ([]byte, error) {
+func FormatFmt(build *BuildResults, body string)  {
 	dest, err := format.Source([]byte(body))
 	if err != nil {
-		return nil, err
+		build.Errors = err
+		return 
 	}
 	finishImports, err := imports.Process("", dest, nil)
 	if err != nil {
-		return nil, err
+		build.Errors = err
+		return 
 	}
-	return finishImports, nil
+	build.Data = finishImports
+	return 
 }
-func WriteCodeFile(data []byte) (string, string, error) {
+func WriteCodeFile(build *BuildResults)  {
 	uid := uuid.New().String()
 	nameContainer := "main_" + uid
-	pathName := fmt.Sprintf("tmp/%s/", uid)
-	pathCompile := pathName + nameContainer
-	err := os.Mkdir(pathName, fs.ModeTemporary)
+	build.pathOutput = fmt.Sprintf("/tmp/build/%s/", uid)
+	build.pathCompile = build.pathOutput + nameContainer
+	err := os.Mkdir(build.pathOutput, fs.ModeTemporary)
 	if err != nil {
-		return "", "", err
+		build.Errors = err
+		return 
 	}
-	file, err := os.Create(pathCompile + ".go")
+	file, err := os.Create(build.pathCompile + ".go")
 	if err != nil {
-		return "", "", err
+		build.Errors = err
+		return 
 	}
-	_, err = file.Write(data)
+	_, err = file.Write(build.Data)
 	if err != nil {
-		return "", "", err
+		build.Errors = err
 	}
-	return pathCompile, pathName, nil
+	return 
 }
-func CompileCode(pathCompile string, pathOutput string) {
-	cmd := exec.Command("go", "build", "-o", pathOutput, pathCompile+".go")
+func CompileCode(build *BuildResults)  {
+	cmd := exec.Command("sudo","go", "build", "-o", build.pathOutput, build.pathCompile+".go")
+	fmt.Println(build.pathOutput,build.pathCompile)
 	cmd.Env = append(cmd.Env, "GOOS=linux")
-	cmd.Env = append(cmd.Env, "GOARCH=amd64")
-	cmd.Env = append(cmd.Env, "GOPATH=C:\\Users\\1\\go")
-	cmd.Env = append(cmd.Env, "GOCACHE=C:\\Users\\1\\AppData\\Local\\go-build")
-	cmd.Env = append(cmd.Env, "GOMODCACHE=C:\\Users\\1\\go\\pkg\\mod")
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Fatal(err)
-	}
-	stderr, err := cmd.StderrPipe()
-	cmd.Start()
-	output, err := ioutil.ReadAll(stdout)
-	errorOutput, err := ioutil.ReadAll(stderr)
-	fmt.Println("Stdout:", string(output))
-	fmt.Println("Stderr:", string(errorOutput))
-	cmd.Wait()
+	cmd.Env = append(cmd.Env, "GOARCH=arm64")
+	cmd.Env = append(cmd.Env, "GOPATH=")
+	cmd.Env = append(cmd.Env, "GOCACHE=")   
+	output,err := cmd.CombinedOutput()
+	fmt.Println(string(output))
+	fmt.Println(err)
+	build.Errors = err
 }
-func EncodeBinaryFile(pathCompile string) (*bytes.Buffer, error) {
+func EncodeBinaryFile(build *BuildResults) (*bytes.Buffer, error) {
 	var buf bytes.Buffer
 	encoder := base64.NewEncoder(base64.StdEncoding, &buf)
 	defer encoder.Close()
-	b, err := ioutil.ReadFile(pathCompile)
+	b, err := ioutil.ReadFile(build.pathCompile)
 	if err != nil {
 		return nil, err
 	}
@@ -100,38 +109,31 @@ func DecodeBinaryFile(buffer *bytes.Buffer) ([]byte, error) {
 	}
 	return dst[:n], err
 }
-func CreateExecutableFile(src []byte) {
-	file, err := os.Create("main.exe")
-	if err != nil {
-		fmt.Println(err)
-	}
-	file.Write(src)
 
-}
-func main() {
-	const data = `package main
-	func main(){
-		fmt.Println(10)
-	}
-	`
-	f, err := FormatFmt(data)
-	if err != nil {
-		fmt.Println(err)
-	}
-	ok, err := CheckCodePackageIsMain(f)
-	if ok {
-		fmt.Println("package is main")
-	} else {
-		fmt.Println("package not main")
-	}
-	p, o, err := WriteCodeFile(f)
-	if err != nil {
-		fmt.Println(err)
-	}
-	CompileCode(p, o)
-	buf, err := EncodeBinaryFile(p)
-	dst, err := DecodeBinaryFile(buf)
-	CreateExecutableFile(dst)
-	// CompileCode()
+// func main() {
+// 	const data = `package main
+// 	func main(){
+// 		fmt.Println(10)
+// 	}
+// 	`
+// 	f, err := FormatFmt(data)
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
+// 	ok, err := CheckCodePackageIsMain(f)
+// 	if ok {
+// 		fmt.Println("package is main")
+// 	} else {
+// 		fmt.Println("package not main")
+// 	}
+// 	p, o, err := WriteCodeFile(f)
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
+// 	CompileCode(p, o)
+// 	buf, err := EncodeBinaryFile(p)
+// 	dst, err := DecodeBinaryFile(buf)
+// 	CreateExecutableFile(dst)
+// 	// CompileCode()
 
-}
+// }

@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+
 	"compiler.com/utils"
 )
 
@@ -24,32 +24,55 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 		req := &Request{}
 		resp := &Response{}
 		json.Unmarshal(body, req)
-		output, err := utils.formatFmt(req.Body)
-		fmt.Println(output)
-		if err != nil {
+		build := utils.NewBuildResult()
+		utils.FormatFmt(build, req.Body)
+		fmt.Println(string(build.Data))
+		if build.Errors != nil {
 			wr.Header().Add("Content-type", "application/json")
 			resp.Res = ""
-			resp.Error = err.Error()
+			resp.Error = build.Errors.Error()
+			outputErrorJSON, _ := json.Marshal(resp)
+			fmt.Println(string(outputErrorJSON))
+			wr.Write(outputErrorJSON)
+			return
+		}
+		utils.CheckCodePackageIsMain(build)
+		if build.Errors != nil {
+			resp.Res = ""
+			resp.Error = fmt.Sprintf("package not main")
+			outputMainJson, _ := json.Marshal(resp)
+			fmt.Println(string(outputMainJson))
+			wr.Write(outputMainJson)
+			return
+		}
+		utils.WriteCodeFile(build)
+		if build.Errors != nil {
+			wr.Header().Add("Content-type", "application/json")
+			resp.Res = ""
+			resp.Error = build.Errors.Error()
 			outputErrorJSON, _ := json.Marshal(resp)
 			fmt.Println(outputErrorJSON)
 			wr.Write(outputErrorJSON)
 			return
 		}
-		req.Body = string(output)
-		inputJSON, _ := json.Marshal(req)
-		r := bytes.NewReader(inputJSON)
-		client := http.Client{}
-		request, _ := http.NewRequest("POST", "http://localhost:8081/run", r)
-		response, err := client.Do(request)
-		fmt.Println(response)
-		if err != nil {
-			fmt.Println(err)
+		utils.CompileCode(build)
+		if build.Errors != nil {
+			wr.Header().Add("Content-type", "application/json")
+			resp.Res = ""
+			resp.Error = build.Errors.Error()
+			outputErrorJSON, _ := json.Marshal(resp)
+			fmt.Println(string(outputErrorJSON))
+			wr.Write(outputErrorJSON)
+			return
 		}
-		b, err := ioutil.ReadAll(response.Body)
-		if err != nil {
-			fmt.Println(err)
-		}
+		buf, _ := utils.EncodeBinaryFile(build)
+		resp.Error = ""
+		resp.Res = string(buf.Bytes())
+		fmt.Println(string(buf.Bytes()))
+		outputJson, _ := json.Marshal(resp)
+
+		
 		wr.Header().Add("Content-type", "application/json")
-		wr.Write(b)
+		wr.Write(outputJson)
 	}
 }

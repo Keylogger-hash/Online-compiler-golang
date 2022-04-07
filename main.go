@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"compiler.com/handlers"
@@ -18,6 +19,8 @@ func main() {
 	mux.HandleFunc("/", handlers.HandleIndex)
 	mux.HandleFunc("/compile", handlers.HandleCompile)
 	mux.HandleFunc("/fmt", handlers.HandleFmt)
+	fmt.Println("Starting server...")
+	fmt.Println("Listen and serve on the port 8080")
 	http.ListenAndServe("localhost:8080", &mux)
 
 }

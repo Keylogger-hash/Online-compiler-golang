@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"compiler.com/utils"
 )
 
 type Response struct {
@@ -21,11 +22,12 @@ func HandleFmt(wr http.ResponseWriter, r *http.Request) {
 			http.Error(wr, fmt.Sprintf("%v", err), http.StatusBadRequest)
 		}
 		json.Unmarshal(buf, rsp)
-		formatBody, err1 := utils.formatFmt(rsp.Res)
+		build := utils.NewBuildResult()
+		utils.FormatFmt(build,rsp.Res)
 		wr.Header().Add("Content-type", "application/json")
-		rsp.Res = string(formatBody)
-		if err1 != nil {
-			rsp.Error = fmt.Sprintf("%v", err1)
+		rsp.Res = string(build.Data)
+		if build.Errors != nil {
+			rsp.Error = fmt.Sprintf("%v", build.Errors)
 		} else {
 			rsp.Error = ""
 		}
