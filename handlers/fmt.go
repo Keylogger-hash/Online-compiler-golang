@@ -3,15 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"go/format"
 	"io"
 	"net/http"
-
-	"golang.org/x/tools/imports"
 )
 
 type Response struct {
-	Res  string
+	Res   string
 	Error string
 }
 
@@ -23,12 +20,12 @@ func HandleFmt(wr http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			http.Error(wr, fmt.Sprintf("%v", err), http.StatusBadRequest)
 		}
-		json.Unmarshal(buf,rsp)
-		formatBody, err1  := formatFmt(rsp.Res)
-		wr.Header().Add("Content-type","application/json")
+		json.Unmarshal(buf, rsp)
+		formatBody, err1 := utils.formatFmt(rsp.Res)
+		wr.Header().Add("Content-type", "application/json")
 		rsp.Res = string(formatBody)
 		if err1 != nil {
-			rsp.Error = fmt.Sprintf("%v",err1)
+			rsp.Error = fmt.Sprintf("%v", err1)
 		} else {
 			rsp.Error = ""
 		}
@@ -41,17 +38,5 @@ func HandleFmt(wr http.ResponseWriter, r *http.Request) {
 	default:
 		wr.WriteHeader(http.StatusMethodNotAllowed)
 	}
-	
-}
 
-func formatFmt(body string) ([]byte, error) {
-	dest, err := format.Source([]byte(body))
-	if err != nil {
-		return nil, err
-	}
-	finishImports, err := imports.Process("", dest, nil)
-	if err != nil {
-		return nil, err
-	}
-	return finishImports, nil
 }

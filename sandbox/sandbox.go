@@ -126,8 +126,8 @@ func handleRun(wr http.ResponseWriter, r *http.Request) {
 	}
 }
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", handleMain)
-	mux.HandleFunc("/run", handleRun)
-	http.ListenAndServe("localhost:8081", mux)
+	// mux := http.NewServeMux()
+	// mux.HandleFunc("/", handleMain)
+	// mux.HandleFunc("/run", handleRun)
+	// http.ListenAndServe("localhost:8081", mux)
  }

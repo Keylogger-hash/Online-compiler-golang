@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"compiler.com/utils"
 )
 
 type Request struct {
@@ -23,7 +24,7 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 		req := &Request{}
 		resp := &Response{}
 		json.Unmarshal(body, req)
-		output, err := formatFmt(req.Body)
+		output, err := utils.formatFmt(req.Body)
 		fmt.Println(output)
 		if err != nil {
 			wr.Header().Add("Content-type", "application/json")
