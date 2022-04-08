@@ -60,7 +60,7 @@ func FormatFmt(build *BuildResults, body string)  {
 func WriteCodeFile(build *BuildResults)  {
 	uid := uuid.New().String()
 	nameContainer := "main_" + uid
-	build.pathOutput = fmt.Sprintf("/tmp/build/%s/", uid)
+	build.pathOutput = fmt.Sprintf("tmp/build/%s/", uid)
 	build.pathCompile = build.pathOutput + nameContainer
 	err := os.Mkdir(build.pathOutput, fs.ModeTemporary)
 	if err != nil {
@@ -79,12 +79,12 @@ func WriteCodeFile(build *BuildResults)  {
 	return 
 }
 func CompileCode(build *BuildResults)  {
-	cmd := exec.Command("sudo","go", "build", "-o", build.pathOutput, build.pathCompile+".go")
+	cmd := exec.Command("go", "build", "-o", build.pathOutput, build.pathCompile+".go")
 	fmt.Println(build.pathOutput,build.pathCompile)
 	cmd.Env = append(cmd.Env, "GOOS=linux")
-	cmd.Env = append(cmd.Env, "GOARCH=arm64")
-	cmd.Env = append(cmd.Env, "GOPATH=")
-	cmd.Env = append(cmd.Env, "GOCACHE=")   
+	cmd.Env = append(cmd.Env, "GOARCH=amd64")
+	cmd.Env = append(cmd.Env, "GOPATH=C:\\Users\\1\\go")
+	cmd.Env = append(cmd.Env, "GOCACHE=C:\\Users\\1\\AppData\\Local\\go-build")   
 	output,err := cmd.CombinedOutput()
 	fmt.Println(string(output))
 	fmt.Println(err)
@@ -100,14 +100,6 @@ func EncodeBinaryFile(build *BuildResults) (*bytes.Buffer, error) {
 	}
 	encoder.Write(b)
 	return &buf, nil
-}
-func DecodeBinaryFile(buffer *bytes.Buffer) ([]byte, error) {
-	var dst []byte = make([]byte, base64.StdEncoding.DecodedLen(len(buffer.Bytes())))
-	n, err := base64.StdEncoding.Decode(dst, buffer.Bytes())
-	if err != nil {
-		return []byte{}, err
-	}
-	return dst[:n], err
 }
 
 // func main() {

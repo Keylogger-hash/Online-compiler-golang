@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -8,8 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 const (
@@ -26,7 +26,7 @@ type Request struct {
 	Body string
 }
 type Response struct {
-	Res string
+	Res   string
 	Error string
 }
 type Container struct {
@@ -47,32 +47,30 @@ func ListContainers() {
 	}
 	fmt.Println(string(output))
 }
-func (c *Container) buildContainer(data []byte) ([]byte, error) {
-	uid := uuid.New().String()
-	nameContainer := "main_" + uid
-	fileName := nameContainer + ".go"
-	c.Name = nameContainer
-	argName := fmt.Sprintf("NameFile=%s", nameContainer)
-	file, err := os.Create("tmp/" + fileName)
-	file.Write(data)
-	defer file.Close()
-	cmd := exec.Command("sudo","docker", "build", ".", "-t", nameContainer, "--build-arg", argName)
-	fmt.Println(cmd)
-	output, err := cmd.Output()
+
+func (c *Container) StartContainer(decodeBytes []byte) ([]byte, error) {
+	cmd := exec.Command("docker", "run", "-i", c.Name)
+	var stdin,stdout, stderr *bytes.Buffer
+	stdin.Write(decodeBytes)
+	cmd.Stdin = stdin
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	err := cmd.Run()
 	if err != nil {
-		fmt.Println(string(output))
+		errorRunning := fmt.Errorf("%s\n%s",stderr.String(),err)
+		return nil,errorRunning
 	}
-	fmt.Println(string(output))
-	return output, nil
+	output := stdout.Bytes()
+	return output,nil
 }
-func (c *Container) StartContainer() ([]byte, error) {
-	cmd := exec.Command("sudo","docker","run","-i",c.Name)
-	fmt.Println(cmd)
-	output, err := cmd.Output()
+func DecodeBase64String(body string) ([]byte, error) {
+	dst := make([]byte, base64.StdEncoding.EncodedLen(len(body)))
+	src := []byte(body)
+	n, err := base64.StdEncoding.Decode(dst, src)
 	if err != nil {
 		return nil, err
 	}
-	return output, nil
+	return dst[:n], nil
 }
 
 func handleMain(wr http.ResponseWriter, r *http.Request) {
@@ -86,33 +84,33 @@ func handleRun(wr http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
 		body, err := ioutil.ReadAll(r.Body)
-		fmt.Println(string(body))
 		if err != nil {
 			http.Error(wr, err.Error(), http.StatusBadRequest)
 		}
 		req := &Request{}
-		err = json.Unmarshal(body, req)
-		fmt.Println(err)
-		if err != nil {
-			http.Error(wr, err.Error(),http.StatusBadRequest)
-		}
-		fmt.Println(string(req.Body))
-		c :=&Container{}
 		resp := &Response{}
-		_,err =  c.buildContainer([]byte(req.Body))
+
+		err = json.Unmarshal(body, req)
 		if err != nil {
-			resp.Error = err.Error()
-			resp.Res = ""
-			output, _ := json.Marshal(resp)
-			wr.Header().Add("Content-type","application/json")
-			wr.Write(output)
+			http.Error(wr, err.Error(), http.StatusBadRequest)
 		}
-		outputContainer, err := c.StartContainer()
+		decodeBytes, err := DecodeBase64String(req.Body)
 		if err != nil {
 			resp.Error = err.Error()
 			resp.Res = ""
 			outputErr, _ := json.Marshal(resp)
-			wr.Header().Add("Content-type","application/json")
+			wr.Header().Add("Content-type", "application/json")
+			wr.Write(outputErr)
+		}
+		c := &Container{Name: "sandbox-golang"}
+		//_, err = c.buildContainer([]byte(req.Body))
+
+		outputContainer, err := c.StartContainer(decodeBytes)
+		if err != nil {
+			resp.Error = err.Error()
+			resp.Res = ""
+			outputErr, _ := json.Marshal(resp)
+			wr.Header().Add("Content-type", "application/json")
 			wr.Write(outputErr)
 		}
 		resp.Res = string(outputContainer)
@@ -120,14 +118,14 @@ func handleRun(wr http.ResponseWriter, r *http.Request) {
 		output, _ := json.Marshal(resp)
 		fmt.Println(string(outputContainer))
 		wr.Write(output)
-		
+
 	default:
 		wr.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
-func main() {
-	// mux := http.NewServeMux()
-	// mux.HandleFunc("/", handleMain)
-	// mux.HandleFunc("/run", handleRun)
-	// http.ListenAndServe("localhost:8081", mux)
- }
+func main() {	
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", handleMain)
+	mux.HandleFunc("/run", handleRun)
+	http.ListenAndServe("localhost:8081", mux)
+}
