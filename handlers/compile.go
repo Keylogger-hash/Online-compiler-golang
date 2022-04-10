@@ -1,18 +1,21 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-
+	"time"
 	"compiler.com/utils"
 )
 
 type Request struct {
 	Body string
 }
-
+type Client struct {
+	
+}
 // Отправляет запрос на sandboxq
 func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -70,9 +73,20 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 		resp.Res = string(buf.Bytes())
 		fmt.Println(string(buf.Bytes()))
 		outputJson, _ := json.Marshal(resp)
-
+		postBody := bytes.NewBuffer(outputJson)
+		client := http.Client{Timeout: 15*time.Second}
+		request, err := http.NewRequest("POST","http://localhost:8081",postBody)
+		responseCompile, err := client.Do(request)
+		if err != nil {
+			wr.Header().Add("Content-type", "application/json")
+			resp.Res = ""
+			resp.Error = err.Error()
+			outputErrorJSON, _ := json.Marshal(resp)
+			fmt.Println(string(outputErrorJSON))
+			wr.Write(outputErrorJSON)
+		}
 		
 		wr.Header().Add("Content-type", "application/json")
-		wr.Write(outputJson)
+		wr.Write([]byte("ok"))
 	}
 }

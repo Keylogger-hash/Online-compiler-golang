@@ -1,0 +1,19 @@
+syntax="proto3";
+
+
+package sandbox;
+option go_package = "compiler.com/sandboxproto";
+
+message RequestMessage {
+    string body = 1;
+}
+
+message ResponseMessage {
+    string res = 1;
+    string error = 2;
+}
+
+
+service RunSandboxCompileCode {
+    rpc RunSandboxCompileCode(RequestMessage) returns (ResponseMessage){};
+}
