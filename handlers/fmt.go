@@ -10,6 +10,7 @@ import (
 
 type Response struct {
 	Res   string
+	Body string
 	Error string
 }
 

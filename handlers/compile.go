@@ -1,21 +1,35 @@
 package handlers
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
-	"time"
+
+	pb "compiler.com/sandboxproto"
 	"compiler.com/utils"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Request struct {
 	Body string
 }
 type Client struct {
-	
 }
+
+func NewClientGrpc() pb.RunSandboxCompileCodeClient {
+	conn, err := grpc.Dial("localhost:8082", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatal("Can't dial localhost:8082")
+	}
+	client := pb.NewRunSandboxCompileCodeClient(conn)
+	return client
+
+}
+
 // Отправляет запрос на sandboxq
 func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -29,6 +43,7 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 		json.Unmarshal(body, req)
 		build := utils.NewBuildResult()
 		utils.FormatFmt(build, req.Body)
+		code := build.Data
 		fmt.Println(string(build.Data))
 		if build.Errors != nil {
 			wr.Header().Add("Content-type", "application/json")
@@ -59,7 +74,8 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 			return
 		}
 		utils.CompileCode(build)
-		if build.Errors != nil {
+		fmt.Println(build)
+		if build.Errors != nil  {
 			wr.Header().Add("Content-type", "application/json")
 			resp.Res = ""
 			resp.Error = build.Errors.Error()
@@ -69,24 +85,21 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 			return
 		}
 		buf, _ := utils.EncodeBinaryFile(build)
-		resp.Error = ""
-		resp.Res = string(buf.Bytes())
-		fmt.Println(string(buf.Bytes()))
-		outputJson, _ := json.Marshal(resp)
-		postBody := bytes.NewBuffer(outputJson)
-		client := http.Client{Timeout: 15*time.Second}
-		request, err := http.NewRequest("POST","http://localhost:8081",postBody)
-		responseCompile, err := client.Do(request)
+
+		client := NewClientGrpc()
+		ctx := context.Background()
+		respMsg, err := client.RunSandboxCompileCode(ctx, &pb.RequestMessage{Body: buf.String()})
+
 		if err != nil {
-			wr.Header().Add("Content-type", "application/json")
-			resp.Res = ""
-			resp.Error = err.Error()
-			outputErrorJSON, _ := json.Marshal(resp)
-			fmt.Println(string(outputErrorJSON))
-			wr.Write(outputErrorJSON)
+			http.Error(wr, "Server error", http.StatusInternalServerError)
 		}
-		
+		resp.Res = respMsg.Res
+		resp.Body = string(code)
+		if resp.Error != "" {
+			resp.Error = respMsg.Error
+		}
+		outputJson, err := json.Marshal(resp)
 		wr.Header().Add("Content-type", "application/json")
-		wr.Write([]byte("ok"))
+		wr.Write(outputJson)
 	}
 }

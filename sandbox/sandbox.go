@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os/exec"
+	"sync"
 	"time"
 
 	pb "compiler.com/sandboxproto"
@@ -24,6 +25,7 @@ const (
 )
 
 var httpServer *http.Server
+var readyContainer chan *Container
 
 type Request struct {
 	Body string
@@ -51,12 +53,12 @@ func ListContainers() {
 	fmt.Println(string(output))
 }
 func buildContainer() error {
-	cmd := exec.Command("sudo", "docker", "-f", "play.Dockerfile", "-t", "sandbox-play", ".")
+	cmd := exec.Command("sudo", "docker", "build", "-t", "sandbox-play", "-f", "play.Dockerfile", ".")
 	err := cmd.Run()
 	return err
 }
 func (c *Container) startContainer(decodeBytes []byte) ([]byte, error) {
-	cmd := exec.Command("sudo", "docker", "run", "-i", c.Name)
+	cmd := exec.Command("sudo", "docker", "run", "-i", "--rm", c.Name)
 	var stdin, stdout, stderr bytes.Buffer
 	stdin.Write(decodeBytes)
 	cmd.Stdin = &stdin
@@ -68,6 +70,7 @@ func (c *Container) startContainer(decodeBytes []byte) ([]byte, error) {
 		return nil, errorRunning
 	}
 	output := stdout.Bytes()
+
 	return output, nil
 }
 func DecodeBase64String(body string) ([]byte, error) {
@@ -93,69 +96,55 @@ func handleMain(wr http.ResponseWriter, r *http.Request) {
 	wr.Write([]byte("Everthing okay!"))
 }
 
-// func handleRun(wr http.ResponseWriter, r *http.Request) {
-// 	switch r.Method {
-// 	case "POST":
-// 		body, err := ioutil.ReadAll(r.Body)
-// 		if err != nil {
-// 			http.Error(wr, err.Error(), http.StatusBadRequest)
-// 		}
-// 		req := &Request{}
-// 		resp := &Response{}
-
-// 		err = json.Unmarshal(body, req)
-// 		if err != nil {
-// 			http.Error(wr, err.Error(), http.StatusBadRequest)
-// 		}
-// 		decodeBytes, err := DecodeBase64String(req.Body)
-// 		if err != nil {
-// 			resp.Error = err.Error()
-// 			resp.Res = ""
-// 			outputErr, _ := json.Marshal(resp)
-// 			wr.Header().Add("Content-type", "application/json")
-// 			wr.Write(outputErr)
-// 		}
-// 		c := &Container{Name: "sandbox-play"}
-// 		//_, err = c.buildContainer([]byte(req.Body))
-
-// 		outputContainer, err := c.startContainer(decodeBytes)
-// 		if err != nil {
-// 			resp.Error = err.Error()
-// 			resp.Res = ""
-// 			outputErr, _ := json.Marshal(resp)
-// 			wr.Header().Add("Content-type", "application/json")
-// 			wr.Write(outputErr)
-// 		}
-// 		resp.Res = string(outputContainer)
-// 		resp.Error = ""
-// 		output, _ := json.Marshal(resp)
-// 		fmt.Println(string(outputContainer))
-// 		wr.Write(output)
-
-// 	default:
-// 		wr.WriteHeader(http.StatusMethodNotAllowed)
-// 	}
-// }
 type Server struct {
+	pb.UnimplementedRunSandboxCompileCodeServer
 }
 
 func (s *Server) RunSandboxCompileCode(context context.Context, message *pb.RequestMessage) (*pb.ResponseMessage, error) {
 	log.Printf("Run Sandbox Compile code")
-	return &pb.ResponseMessage{Res: "Hello world", Error: ""}, nil
+	decodeBytes, err := DecodeBase64String(message.Body)
+	if err != nil {
+		return nil, err
+	}
+	c := Container{Name: "sandbox-play"}
+
+	output, err := c.startContainer(decodeBytes)
+	if err != nil {
+		return &pb.ResponseMessage{Res: string(output), Error: err.Error()}, err
+	}
+	return &pb.ResponseMessage{Res: string(output), Error: ""}, nil
+}
+
+func makeWorkers(ctx context.Context, wg *sync.WaitGroup) {
+	for {
+		wg.Add(1)
+	}
+}
+
+func worker(ctx context.Context) {
+
 }
 func main() {
-	l, err := net.Listen("tcp", "0.0.0.0:8081")
+	ListContainers()
+	err := buildContainer()
 	if err != nil {
-		log.Fatal("Failed error to listen server port: %v", err)
+		fmt.Println(err)
+		log.Fatal("Not build container sandbox-play.Stopped!")
 	}
+	fmt.Println("Build container")
+	l, err := net.Listen("tcp", "0.0.0.0:8082")
+	if err != nil {
+		log.Fatalf("Failed error to listen server port: %v", err)
+	}
+	fmt.Println("Listen  port :8081")
 	server := grpc.NewServer()
-	rc := RunSandboxCompileCodeServer.Server{}
-	pb.RegisterRunSandboxCompileCodeServer(server, &rc)
+	pb.RegisterRunSandboxCompileCodeServer(server, &Server{})
 	err = server.Serve(l)
-	if err != nil {
-		log.Fatal("Failed error to listen grpc server port: %v", err)
-	}
+	fmt.Println("Serve port 8081")
 	fmt.Println("Server starting...")
+	if err != nil {
+		log.Fatalf("Failed error to listen grpc server port: %v", err)
+	}
 	// ListContainers()
 	// err := buildContainer()
 	// if err != nil {

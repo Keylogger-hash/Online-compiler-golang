@@ -150,9 +150,12 @@
                 fetch("/compile",Data).then(response => response.json()).then((data) => {
                     console.log(data)
                     if (data["Error"] !== "" ){
-                        stderr.textContent = data["Error"]
+                        stdout.textContent = data["Error"]
+                        stderr.textContent = "Go build failed"
                     } else {
                         stdout.textContent = data["Res"]
+                        editor.session.setValue(data["Body"],-1)
+                        stderr.textContent = "Program exited."
                     }
                 });
             }

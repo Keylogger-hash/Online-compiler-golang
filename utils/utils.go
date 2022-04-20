@@ -8,10 +8,10 @@ import (
 	"go/parser"
 	"go/token"
 	"io"
-	"io/fs"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/google/uuid"
 	"golang.org/x/tools/imports"
@@ -30,65 +30,71 @@ type BuildResults struct {
 func NewBuildResult() *BuildResults {
 	return &BuildResults{}
 }
-func CheckCodePackageIsMain(build *BuildResults)  {
+func CheckCodePackageIsMain(build *BuildResults) {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "", build.Data, parser.AllErrors)
 	if err != nil {
 		build.Errors = err
-		return 
+		return
 	}
 	if file.Name.Name != "main" {
 		build.Errors = fmt.Errorf("package is not main")
-		return 
+		return
 	}
-	return 
+	return
 }
-func FormatFmt(build *BuildResults, body string)  {
+func FormatFmt(build *BuildResults, body string) {
 	dest, err := format.Source([]byte(body))
 	if err != nil {
 		build.Errors = err
-		return 
+		return
 	}
 	finishImports, err := imports.Process("", dest, nil)
 	if err != nil {
 		build.Errors = err
-		return 
+		return
 	}
 	build.Data = finishImports
-	return 
+	return
 }
-func WriteCodeFile(build *BuildResults)  {
+func WriteCodeFile(build *BuildResults) {
 	uid := uuid.New().String()
 	nameContainer := "main_" + uid
-	build.pathOutput = fmt.Sprintf("tmp/build/%s/", uid)
+	build.pathOutput = fmt.Sprintf("/tmp/build/%s/", uid)
 	build.pathCompile = build.pathOutput + nameContainer
-	err := os.Mkdir(build.pathOutput, fs.ModeTemporary)
+	err := os.Mkdir(build.pathOutput, 0750)
 	if err != nil {
 		build.Errors = err
-		return 
+		return
 	}
 	file, err := os.Create(build.pathCompile + ".go")
 	if err != nil {
 		build.Errors = err
-		return 
+		return
 	}
 	_, err = file.Write(build.Data)
 	if err != nil {
 		build.Errors = err
 	}
-	return 
+	return
 }
-func CompileCode(build *BuildResults)  {
+func CompileCode(build *BuildResults) {
 	cmd := exec.Command("go", "build", "-o", build.pathOutput, build.pathCompile+".go")
-	fmt.Println(build.pathOutput,build.pathCompile)
+	fmt.Println(build.pathOutput, build.pathCompile+".go")
+	var stderr strings.Builder
 	cmd.Env = append(cmd.Env, "GOOS=linux")
-	cmd.Env = append(cmd.Env, "GOARCH=amd64")
-	cmd.Env = append(cmd.Env, "GOPATH=C:\\Users\\1\\go")
-	cmd.Env = append(cmd.Env, "GOCACHE=C:\\Users\\1\\AppData\\Local\\go-build")   
-	output,err := cmd.CombinedOutput()
-	fmt.Println(string(output))
-	fmt.Println(err)
-	build.Errors = err
+	cmd.Env = append(cmd.Env, "GOARCH=arm64")
+	cmd.Env = append(cmd.Env, "GOPATH=/Users/pavelmorozov/go")
+	cmd.Env = append(cmd.Env, "GOCACHE=/Users/pavelmorozov/Library/Caches/go-build")
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	fmt.Println(stderr.String())
+	if err != nil {
+		fmt.Println(stderr.String())
+		build.Errors = fmt.Errorf("%s", stderr.String())
+	} else {
+		build.Errors = nil
+	}
 }
 func EncodeBinaryFile(build *BuildResults) (*bytes.Buffer, error) {
 	var buf bytes.Buffer
