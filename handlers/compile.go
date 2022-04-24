@@ -42,10 +42,8 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 		resp := &Response{}
 		json.Unmarshal(body, req)
 		build := utils.NewBuildResult()
-		utils.FormatFmt(build, req.Body)
-		code := build.Data
-		fmt.Println(string(build.Data))
-		if build.Errors != nil {
+		code, err := utils.FormatFmt(req.Body)
+		if err != nil {
 			wr.Header().Add("Content-type", "application/json")
 			resp.Res = ""
 			resp.Error = build.Errors.Error()
@@ -54,8 +52,8 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 			wr.Write(outputErrorJSON)
 			return
 		}
-		utils.CheckCodePackageIsMain(build)
-		if build.Errors != nil {
+		err = utils.CheckCodePackageIsMain(code)
+		if err != nil {
 			resp.Res = ""
 			resp.Error = fmt.Sprintf("package not main")
 			outputMainJson, _ := json.Marshal(resp)
@@ -63,8 +61,8 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 			wr.Write(outputMainJson)
 			return
 		}
-		utils.WriteCodeFile(build)
-		if build.Errors != nil {
+		compilePath,err := utils.WriteCodeFile(code)
+		if err != nil {
 			wr.Header().Add("Content-type", "application/json")
 			resp.Res = ""
 			resp.Error = build.Errors.Error()
@@ -73,8 +71,7 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 			wr.Write(outputErrorJSON)
 			return
 		}
-		utils.CompileCode(build)
-		fmt.Println(build)
+		data, err := utils.CompileCode(compilePath)
 		if build.Errors != nil  {
 			wr.Header().Add("Content-type", "application/json")
 			resp.Res = ""
@@ -84,11 +81,11 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 			wr.Write(outputErrorJSON)
 			return
 		}
-		buf, _ := utils.EncodeBinaryFile(build)
+		buf := utils.EncodeToBase64(data)
 
 		client := NewClientGrpc()
 		ctx := context.Background()
-		respMsg, err := client.RunSandboxCompileCode(ctx, &pb.RequestMessage{Body: buf.String()})
+		respMsg, err := client.RunSandboxCompileCode(ctx, &pb.RequestMessage{Body: string(buf)})
 
 		if err != nil {
 			http.Error(wr, "Server error", http.StatusInternalServerError)

@@ -23,13 +23,12 @@ func HandleFmt(wr http.ResponseWriter, r *http.Request) {
 			http.Error(wr, fmt.Sprintf("%v", err), http.StatusBadRequest)
 		}
 		json.Unmarshal(buf, rsp)
-		build := utils.NewBuildResult()
-		utils.FormatFmt(build,rsp.Res)
+		code, err := utils.FormatFmt(rsp.Res)
 		wr.Header().Add("Content-type", "application/json")
-		rsp.Res = string(build.Data)
-		if build.Errors != nil {
-			rsp.Error = fmt.Sprintf("%v", build.Errors)
+		if err != nil {
+			rsp.Error = fmt.Sprintf("%v", err)
 		} else {
+			rsp.Res = string(code)
 			rsp.Error = ""
 		}
 		ans, err := json.Marshal(rsp)

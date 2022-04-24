@@ -2,7 +2,9 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"go/format"
 	"go/parser"
@@ -12,14 +14,18 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/tools/imports"
 )
 
+const maxBuildTime = time.Second * 5
+const maxBinarySize = 10 >> 20
+
 type BuildResults struct {
-	pathCompile string
-	pathOutput  string
+	PathCompile string
+	PathOutput  string
 	Data        []byte
 	Stdout      io.ReadCloser
 	Stderr      io.ReadCloser
@@ -30,108 +36,95 @@ type BuildResults struct {
 func NewBuildResult() *BuildResults {
 	return &BuildResults{}
 }
-func CheckCodePackageIsMain(build *BuildResults) {
+func CheckCodePackageIsMain(code []byte) error {
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "", build.Data, parser.AllErrors)
+	file, err := parser.ParseFile(fset, "", code, parser.AllErrors)
 	if err != nil {
-		build.Errors = err
-		return
+		return err
 	}
 	if file.Name.Name != "main" {
-		build.Errors = fmt.Errorf("package is not main")
-		return
+		return fmt.Errorf("package is not main")
 	}
-	return
+	return nil
 }
-func FormatFmt(build *BuildResults, body string) {
+func FormatFmt(body string) ([]byte, error) {
 	dest, err := format.Source([]byte(body))
 	if err != nil {
-		build.Errors = err
-		return
+		return nil, err
 	}
 	finishImports, err := imports.Process("", dest, nil)
 	if err != nil {
-		build.Errors = err
-		return
+		return nil, err
 	}
-	build.Data = finishImports
-	return
+	return finishImports, nil
 }
-func WriteCodeFile(build *BuildResults) {
+func WriteCodeFile(data []byte) (string, error) {
 	uid := uuid.New().String()
 	nameContainer := "main_" + uid
-	build.pathOutput = fmt.Sprintf("/tmp/build/%s/", uid)
-	build.pathCompile = build.pathOutput + nameContainer
-	err := os.Mkdir(build.pathOutput, 0750)
+	PathOutput := fmt.Sprintf("/tmp/build/%s/", uid)
+	PathCompile := PathOutput + nameContainer
+	err := os.Mkdir(PathOutput, 0750)
 	if err != nil {
-		build.Errors = err
-		return
+		return PathCompile, err
 	}
-	file, err := os.Create(build.pathCompile + ".go")
+	file, err := os.Create(PathCompile + ".go")
 	if err != nil {
-		build.Errors = err
-		return
+		return PathCompile, err
 	}
-	_, err = file.Write(build.Data)
+	_, err = file.Write(data)
 	if err != nil {
-		build.Errors = err
+		return PathCompile, err
 	}
-	return
+	return PathCompile, nil
 }
-func CompileCode(build *BuildResults) {
-	cmd := exec.Command("go", "build", "-o", build.pathOutput, build.pathCompile+".go")
-	fmt.Println(build.pathOutput, build.pathCompile+".go")
+
+// func (b *BuildResults) cleanup(){
+// 	os.RemoveAll(b.PathCompile)
+// }
+func EncodeToBase64(src []byte) []byte {
+	dst := make([]byte, base64.StdEncoding.EncodedLen(len(src)))
+	base64.StdEncoding.Encode(dst, src)
+	return dst
+}
+func CompileCode(tmpDir string) ([]byte, error) {
+	defer os.RemoveAll("/tmp/build")
 	var stderr strings.Builder
+	ctx, finish := context.WithTimeout(context.Background(), maxBuildTime)
+	defer finish()
+	cmd := exec.CommandContext(ctx, "go", "build", "-o", tmpDir, tmpDir+".go")
 	cmd.Env = append(cmd.Env, "GOOS=linux")
 	cmd.Env = append(cmd.Env, "GOARCH=arm64")
 	cmd.Env = append(cmd.Env, "GOPATH=/Users/pavelmorozov/go")
 	cmd.Env = append(cmd.Env, "GOCACHE=/Users/pavelmorozov/Library/Caches/go-build")
 	cmd.Stderr = &stderr
+
 	err := cmd.Run()
-	fmt.Println(stderr.String())
-	if err != nil {
-		fmt.Println(stderr.String())
-		build.Errors = fmt.Errorf("%s", stderr.String())
-	} else {
-		build.Errors = nil
+	if ctx.Err() != nil {
+		return nil, errors.New("Timeout is happened")
 	}
+	if err != nil {
+		buildError := fmt.Errorf("%s", err.Error()+"\n"+stderr.String())
+		return nil, buildError
+	}
+	file, _ := os.Stat(tmpDir)
+	if buildSize := file.Size(); buildSize > maxBinarySize {
+		maxBuildError := fmt.Errorf("Maximum binary file size exceeded")
+		return nil, maxBuildError
+	}
+	data, _ := ioutil.ReadFile(tmpDir)
+	return data, nil
+
 }
+
+//
 func EncodeBinaryFile(build *BuildResults) (*bytes.Buffer, error) {
 	var buf bytes.Buffer
 	encoder := base64.NewEncoder(base64.StdEncoding, &buf)
 	defer encoder.Close()
-	b, err := ioutil.ReadFile(build.pathCompile)
+	b, err := ioutil.ReadFile(build.PathCompile)
 	if err != nil {
 		return nil, err
 	}
 	encoder.Write(b)
 	return &buf, nil
 }
-
-// func main() {
-// 	const data = `package main
-// 	func main(){
-// 		fmt.Println(10)
-// 	}
-// 	`
-// 	f, err := FormatFmt(data)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-// 	ok, err := CheckCodePackageIsMain(f)
-// 	if ok {
-// 		fmt.Println("package is main")
-// 	} else {
-// 		fmt.Println("package not main")
-// 	}
-// 	p, o, err := WriteCodeFile(f)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 	}
-// 	CompileCode(p, o)
-// 	buf, err := EncodeBinaryFile(p)
-// 	dst, err := DecodeBinaryFile(buf)
-// 	CreateExecutableFile(dst)
-// 	// CompileCode()
-
-// }
