@@ -41,12 +41,11 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 		req := &Request{}
 		resp := &Response{}
 		json.Unmarshal(body, req)
-		build := utils.NewBuildResult()
 		code, err := utils.FormatFmt(req.Body)
 		if err != nil {
 			wr.Header().Add("Content-type", "application/json")
 			resp.Res = ""
-			resp.Error = build.Errors.Error()
+			resp.Error = err.Error()
 			outputErrorJSON, _ := json.Marshal(resp)
 			fmt.Println(string(outputErrorJSON))
 			wr.Write(outputErrorJSON)
@@ -61,32 +60,33 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 			wr.Write(outputMainJson)
 			return
 		}
-		compilePath,err := utils.WriteCodeFile(code)
+		compilePath, err := utils.WriteCodeFile(code)
 		if err != nil {
 			wr.Header().Add("Content-type", "application/json")
 			resp.Res = ""
-			resp.Error = build.Errors.Error()
+			resp.Error = err.Error()
 			outputErrorJSON, _ := json.Marshal(resp)
 			fmt.Println(outputErrorJSON)
 			wr.Write(outputErrorJSON)
 			return
 		}
+		fmt.Println(compilePath)
 		data, err := utils.CompileCode(compilePath)
-		if build.Errors != nil  {
+		if err != nil {
 			wr.Header().Add("Content-type", "application/json")
 			resp.Res = ""
-			resp.Error = build.Errors.Error()
+			resp.Error = err.Error()
 			outputErrorJSON, _ := json.Marshal(resp)
 			fmt.Println(string(outputErrorJSON))
 			wr.Write(outputErrorJSON)
 			return
 		}
 		buf := utils.EncodeToBase64(data)
+		fmt.Println(buf)
 
 		client := NewClientGrpc()
 		ctx := context.Background()
 		respMsg, err := client.RunSandboxCompileCode(ctx, &pb.RequestMessage{Body: string(buf)})
-
 		if err != nil {
 			http.Error(wr, "Server error", http.StatusInternalServerError)
 		}

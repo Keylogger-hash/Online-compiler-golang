@@ -21,7 +21,7 @@ import (
 )
 
 const maxBuildTime = time.Second * 5
-const maxBinarySize = 10 >> 20
+const maxBinarySize = 10 << 20
 
 type BuildResults struct {
 	PathCompile string
@@ -63,7 +63,7 @@ func WriteCodeFile(data []byte) (string, error) {
 	nameContainer := "main_" + uid
 	PathOutput := fmt.Sprintf("/tmp/build/%s/", uid)
 	PathCompile := PathOutput + nameContainer
-	err := os.Mkdir(PathOutput, 0750)
+	err := os.MkdirAll(PathOutput, 0750)
 	if err != nil {
 		return PathCompile, err
 	}
@@ -88,9 +88,11 @@ func EncodeToBase64(src []byte) []byte {
 }
 func CompileCode(tmpDir string) ([]byte, error) {
 	defer os.RemoveAll("/tmp/build")
+
 	var stderr strings.Builder
 	ctx, finish := context.WithTimeout(context.Background(), maxBuildTime)
 	defer finish()
+
 	cmd := exec.CommandContext(ctx, "go", "build", "-o", tmpDir, tmpDir+".go")
 	cmd.Env = append(cmd.Env, "GOOS=linux")
 	cmd.Env = append(cmd.Env, "GOARCH=arm64")
@@ -111,7 +113,10 @@ func CompileCode(tmpDir string) ([]byte, error) {
 		maxBuildError := fmt.Errorf("Maximum binary file size exceeded")
 		return nil, maxBuildError
 	}
-	data, _ := ioutil.ReadFile(tmpDir)
+	data, err := ioutil.ReadFile(tmpDir)
+	if err != nil {
+		return nil,err
+	}
 	return data, nil
 
 }
