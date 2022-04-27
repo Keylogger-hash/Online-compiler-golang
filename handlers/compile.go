@@ -47,7 +47,6 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 			resp.Res = ""
 			resp.Error = err.Error()
 			outputErrorJSON, _ := json.Marshal(resp)
-			fmt.Println(string(outputErrorJSON))
 			wr.Write(outputErrorJSON)
 			return
 		}
@@ -56,7 +55,6 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 			resp.Res = ""
 			resp.Error = fmt.Sprintf("package not main")
 			outputMainJson, _ := json.Marshal(resp)
-			fmt.Println(string(outputMainJson))
 			wr.Write(outputMainJson)
 			return
 		}
@@ -66,35 +64,31 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 			resp.Res = ""
 			resp.Error = err.Error()
 			outputErrorJSON, _ := json.Marshal(resp)
-			fmt.Println(outputErrorJSON)
 			wr.Write(outputErrorJSON)
 			return
 		}
-		fmt.Println(compilePath)
 		data, err := utils.CompileCode(compilePath)
 		if err != nil {
 			wr.Header().Add("Content-type", "application/json")
 			resp.Res = ""
 			resp.Error = err.Error()
 			outputErrorJSON, _ := json.Marshal(resp)
-			fmt.Println(string(outputErrorJSON))
 			wr.Write(outputErrorJSON)
 			return
 		}
 		buf := utils.EncodeToBase64(data)
-		fmt.Println(buf)
-
 		client := NewClientGrpc()
 		ctx := context.Background()
-		respMsg, err := client.RunSandboxCompileCode(ctx, &pb.RequestMessage{Body: string(buf)})
-		if err != nil {
-			http.Error(wr, "Server error", http.StatusInternalServerError)
-		}
+		respMsg, _ := client.RunSandboxCompileCode(ctx, &pb.RequestMessage{Body: string(buf)})
+		// if err != nil {
+		// 	http.Error(wr, "Server error", http.StatusInternalServerError)
+		// }
 		resp.Res = respMsg.Res
 		resp.Body = string(code)
-		if resp.Error != "" {
-			resp.Error = respMsg.Error
-		}
+		resp.Error = respMsg.Error
+		// if resp.Error != "" {
+		// 	resp.Error = respMsg.Error
+		// }
 		outputJson, err := json.Marshal(resp)
 		wr.Header().Add("Content-type", "application/json")
 		wr.Write(outputJson)

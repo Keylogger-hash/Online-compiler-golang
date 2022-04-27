@@ -58,13 +58,21 @@ func buildContainer() error {
 	return err
 }
 func (c *Container) startContainer(decodeBytes []byte) ([]byte, error) {
-	cmd := exec.Command("sudo", "docker", "run", "-i", "--rm", c.Name)
+	ctx, finish := context.WithTimeout(context.Background(),time.Second*5)
+	defer finish()
+	cmd := exec.CommandContext(ctx,"sudo", "docker", "run", "-i", "--rm", c.Name)
 	var stdin, stdout, stderr bytes.Buffer
 	stdin.Write(decodeBytes)
 	cmd.Stdin = &stdin
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
+	if ctx.Err() != nil {
+		errorTimeout := fmt.Errorf("Timelimit exceed")
+		fmt.Println("Timeout exceed")
+		cmd.Process.Kill()
+		return nil, errorTimeout
+	}
 	if err != nil {
 		errorRunning := fmt.Errorf("%s\n%s", stderr.String(), err)
 		return nil, errorRunning
@@ -109,8 +117,9 @@ func (s *Server) RunSandboxCompileCode(context context.Context, message *pb.Requ
 	c := Container{Name: "sandbox-play"}
 
 	output, err := c.startContainer(decodeBytes)
+	fmt.Println(err)
 	if err != nil {
-		return &pb.ResponseMessage{Res: string(output), Error: err.Error()}, err
+		return &pb.ResponseMessage{Res: string(output), Error: err.Error()},nil
 	}
 	return &pb.ResponseMessage{Res: string(output), Error: ""}, nil
 }
