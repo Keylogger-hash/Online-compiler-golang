@@ -58,7 +58,7 @@ func buildContainer() error {
 	return err
 }
 func (c *Container) startContainer(decodeBytes []byte) ([]byte, error) {
-	ctx, finish := context.WithTimeout(context.Background(),time.Second*5)
+	ctx, finish := context.WithTimeout(context.Background(),time.Second*30)
 	defer finish()
 	cmd := exec.CommandContext(ctx,"sudo", "docker", "run", "-i", "--rm", c.Name)
 	var stdin, stdout, stderr bytes.Buffer
@@ -67,16 +67,17 @@ func (c *Container) startContainer(decodeBytes []byte) ([]byte, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
+	if err != nil {
+		errorRunning := fmt.Errorf("%s\n%s", stderr.String(), err)
+		return nil, errorRunning
+	}
 	if ctx.Err() != nil {
 		errorTimeout := fmt.Errorf("Timelimit exceed")
 		fmt.Println("Timeout exceed")
 		cmd.Process.Kill()
 		return nil, errorTimeout
 	}
-	if err != nil {
-		errorRunning := fmt.Errorf("%s\n%s", stderr.String(), err)
-		return nil, errorRunning
-	}
+	
 	output := stdout.Bytes()
 
 	return output, nil
