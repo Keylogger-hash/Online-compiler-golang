@@ -8,7 +8,7 @@ import (
 	"net"
 	"net/http"
 	"os/exec"
-	"sync"
+	"runtime"
 	"time"
 
 	pb "compiler.com/sandboxproto"
@@ -26,6 +26,9 @@ const (
 
 var httpServer *http.Server
 var readyContainer chan *Container
+var in chan []byte = make(chan []byte, 100)
+var out chan []byte = make(chan []byte, 100)
+var errC chan error = make(chan error, 100)
 
 type Request struct {
 	Body string
@@ -58,9 +61,9 @@ func buildContainer() error {
 	return err
 }
 func (c *Container) startContainer(decodeBytes []byte) ([]byte, error) {
-	ctx, finish := context.WithTimeout(context.Background(),time.Second*30)
+	ctx, finish := context.WithTimeout(context.Background(), time.Second*30)
 	defer finish()
-	cmd := exec.CommandContext(ctx,"sudo", "docker", "run", "-i", "--rm", c.Name)
+	cmd := exec.CommandContext(ctx, "sudo", "docker", "run", "-i", "--rm", c.Name)
 	var stdin, stdout, stderr bytes.Buffer
 	stdin.Write(decodeBytes)
 	cmd.Stdin = &stdin
@@ -77,7 +80,7 @@ func (c *Container) startContainer(decodeBytes []byte) ([]byte, error) {
 		cmd.Process.Kill()
 		return nil, errorTimeout
 	}
-	
+
 	output := stdout.Bytes()
 
 	return output, nil
@@ -115,24 +118,44 @@ func (s *Server) RunSandboxCompileCode(context context.Context, message *pb.Requ
 	if err != nil {
 		return nil, err
 	}
-	c := Container{Name: "sandbox-play"}
+	fmt.Println(decodeBytes)
+	in <- decodeBytes
 
-	output, err := c.startContainer(decodeBytes)
+	output, err := GetContainer(out, errC)
+	fmt.Println(output)
 	fmt.Println(err)
 	if err != nil {
-		return &pb.ResponseMessage{Res: string(output), Error: err.Error()},nil
+		return &pb.ResponseMessage{Res: string(output), Error: err.Error()}, nil
 	}
 	return &pb.ResponseMessage{Res: string(output), Error: ""}, nil
 }
 
-func makeWorkers(ctx context.Context, wg *sync.WaitGroup) {
-	for {
-		wg.Add(1)
+func GetContainer(out chan []byte, errC chan error) ([]byte, error) {
+	select {
+	case val := <-out:
+		return val, nil
+	case err := <-errC:
+		return nil, err
 	}
 }
+func workerLoop(in, out chan []byte, errC chan error) {
+	select {
+	case decodeBytes := <-in:
+		c := Container{Name: "sandbox-play"}
 
-func worker(ctx context.Context) {
+		output, err := c.startContainer(decodeBytes)
 
+		if err != nil {
+			errC <- err
+		}
+		out <- output
+	}
+
+}
+func makeWorkers() {
+	for i := 0; i < runtime.NumCPU(); i++ {
+		go workerLoop(in, out, errC)
+	}
 }
 func main() {
 	ListContainers()
@@ -142,6 +165,7 @@ func main() {
 		log.Fatal("Not build container sandbox-play.Stopped!")
 	}
 	fmt.Println("Build container")
+	makeWorkers()
 	l, err := net.Listen("tcp", "0.0.0.0:8082")
 	if err != nil {
 		log.Fatalf("Failed error to listen server port: %v", err)
