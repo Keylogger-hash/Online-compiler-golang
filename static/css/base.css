@@ -1,0 +1,92 @@
+/* .header {
+  padding: 10px;
+  text-align: left;
+  background:  #007d9c;
+  color: white;
+  font-size: 12px;
+} */
+/* * {
+  box-sizing: border-box;
+} */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #fff;;
+}
+nav ul {
+  list-style: none;
+  padding: 20px;
+  margin: 0;
+  background-color: #007d9c;
+  text-align: center; /* step 6 */
+}
+nav li {
+display: inline-block; /* step 1 */
+width: 20%; /* step 4 */
+margin-right: -4px; /* step 5 */
+}
+nav a {
+display: block; /* step 2 */
+text-decoration: none; /* step 3 */
+}
+/* common text style */
+nav a {
+font-family: sans-serif;
+height: 40%; /* vertically center */
+line-height: 40%; /* vertically center */
+color: #fff;
+}
+/* nav a:hover {
+background-color: #005f5f;
+}
+
+nav a.active {
+background-color: #eee;
+color: #444;
+cursor: default;
+} */
+#footer {
+  background-color:#c0392b;
+  width:100%;
+  position:fixed;
+  bottom:0;
+  padding:0;
+  box-sizing:border-box;
+  -moz-box-sizing:border-box; /* Firefox */
+  -webkit-box-sizing:border-box; /* Safari */
+}
+
+.split {
+  height: 90%;
+  width: 50%;
+  position: fixed;
+  z-index: -1;
+  top: 0;
+  overflow-x: hidden;
+  padding-top: 80px;
+}
+  
+  /* Control the left side */
+.left {
+  left: 0;
+}
+  
+  /* Control the right side */
+.right {
+  right: 0;
+}
+  
+  /* If you want the content centered horizontally and vertically */
+.centered {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+  
+  /* Style the image inside the centered container, if needed */
+.centered img {
+  width: 150px;
+  border-radius: 50%;
+}
