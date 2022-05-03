@@ -18,7 +18,7 @@ func main() {
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
 	mux.HandleFunc("/", handlers.HandleIndex)
 	mux.HandleFunc("/compile", handlers.HandleCompile)
-	mux.HandleFunc("/index1",handlers.HandleIndex1)
+	mux.HandleFunc("/contacts",handlers.HandleContacts)
 	mux.HandleFunc("/fmt", handlers.HandleFmt)
 	fmt.Println("Starting server...")
 	fmt.Println("Listen and serve on the port 8080")

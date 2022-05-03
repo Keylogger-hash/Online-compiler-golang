@@ -55,7 +55,45 @@ cursor: default;
   -moz-box-sizing:border-box; /* Firefox */
   -webkit-box-sizing:border-box; /* Safari */
 }
-
+#line-break {
+  height:1.75rem; 
+  padding:0 0.625rem;
+}
+#editor {
+  height: 86%; 
+  width: 90%
+}
+#code-button-group {
+  display:inline-block; 
+  padding-bottom: 1em;
+}
+#textbox {
+  width:96%;
+  height:83.5%;
+  ;overflow-y: scroll;
+  overflow-x: hidden;
+  background-color: #ffffdd;
+  border: solid #5B6DCD 3px;
+   padding: 5px;
+   box-sizing: content-box;
+}
+.code-button {
+  align-items: center;
+  background-color: #ffffdd;;
+  border: none;
+  border-radius: 0.1875rem;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 20%);
+  box-sizing: border-box;
+  color: #007d9c;
+  cursor: pointer;
+  display: inline-flex;
+  font: bold 0.875rem Roboto, sans-serif;
+  height: 1.75rem;
+  padding: 0 0.625rem;
+  justify-content: center;
+  min-width: 4.063rem;
+  text-decoration: none;
+}
 .split {
   height: 90%;
   width: 50%;
@@ -77,16 +115,17 @@ cursor: default;
 }
   
   /* If you want the content centered horizontally and vertically */
-.centered {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
+
+#stdout {
+  overflow-wrap: break-word;
+  white-space: normal;
 }
-  
+#stderr {
+  overflow-wrap: break-word;
+  white-space: normal;
+}
   /* Style the image inside the centered container, if needed */
-.centered img {
+/* .centered img {
   width: 150px;
   border-radius: 50%;
-}
+} */

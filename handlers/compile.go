@@ -9,16 +9,12 @@ import (
 	"net/http"
 
 	pb "compiler.com/sandboxproto"
+	s "compiler.com/handlers/handlers_struct"
+	// s "compiler.com/handlers/handlers-struct/struct"
 	"compiler.com/utils"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
-
-type Request struct {
-	Body string
-}
-type Client struct {
-}
 
 func NewClientGrpc() pb.RunSandboxCompileCodeClient {
 	conn, err := grpc.Dial("localhost:8082", grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -38,8 +34,8 @@ func HandleCompile(wr http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			http.Error(wr, err.Error(), http.StatusBadRequest)
 		}
-		req := &Request{}
-		resp := &Response{}
+		req := &s.Request{}
+		resp := &s.Response{}
 		json.Unmarshal(body, req)
 		code, err := utils.FormatFmt(req.Body)
 		if err != nil {

@@ -20,7 +20,7 @@ const (
 	startTimeout  = time.Second * 30
 	runTimeout    = time.Second * 5
 	maxBinarySize = 100 << 20
-	maxOutput     = 100 << 20
+	maxOutput     = 10 << 20
 	memLimitBytes = 100 << 20
 )
 
@@ -82,7 +82,7 @@ func (c *Container) startContainer(decodeBytes []byte) ([]byte, error) {
 	}
 
 	output := stdout.Bytes()
-
+	
 	return output, nil
 }
 func DecodeBase64String(body string) ([]byte, error) {

@@ -53,6 +53,7 @@ func FormatFmt(body string) ([]byte, error) {
 		return nil, err
 	}
 	finishImports, err := imports.Process("", dest, nil)
+	fmt.Println(err)
 	if err != nil {
 		return nil, err
 	}

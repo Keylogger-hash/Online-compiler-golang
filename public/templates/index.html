@@ -13,91 +13,31 @@
                     <li><a href="/">Why go</a></li>
                     <li><a href="#">About</a></li>
                     <li><a href="#">Terms of service</a></li>
-                    <li><a href="#">Contact</a></li>
+                    <li><a href="/contacts">Contact</a></li>
                   </ul>
               </header>
-            <!-- <div class="header">
-                <h2>Online compiler golang</h2>
-            </div> -->
             <div class="split left">
-                <!-- <h2>Code</h2> -->
                 <p></p>
-                <div style="display:inline-block; padding-bottom: 1em;">
-                    <button id="run-code" style="align-items: center;
-                    background-color: #ffffdd;;
-                    border: none;
-                    border-radius: 0.1875rem;
-                    box-shadow: 0 2px 5px rgb(0 0 0 / 20%);
-                    box-sizing: border-box;
-                    color: #007d9c;
-                    cursor: pointer;
-                    display: inline-flex;
-                    font: bold 0.875rem Roboto, sans-serif;
-                    height: 1.75rem;
-                    padding: 0 0.625rem;
-                    justify-content: center;
-                    min-width: 4.063rem;
-                    text-decoration: none;">Run</button>
-                    <button id="format-code" style="align-items: center;
-                    background-color: #ffffdd;;
-                    border: none;
-                    border-radius: 0.1875rem;
-                    box-shadow: 0 2px 5px rgb(0 0 0 / 20%);
-                    box-sizing: border-box;
-                    color: #007d9c;
-                    cursor: pointer;
-                    display: inline-flex;
-                    font: bold 0.875rem Roboto, sans-serif;
-                    height: 1.75rem;
-                    padding: 0 0.625rem;
-                    justify-content: center;
-                    min-width: 4.063rem;
-                    text-decoration: none;">Format</button>
-                     <button id="open-code" style="align-items: center;
-                     background-color: #ffffdd;;
-                     border: none;
-                     border-radius: 0.1875rem;
-                     box-shadow: 0 2px 5px rgb(0 0 0 / 20%);
-                     box-sizing: border-box;
-                     color: #007d9c;
-                     cursor: pointer;
-                     display: inline-flex;
-                     font: bold 0.875rem Roboto, sans-serif;
-                     height: 1.75rem;
-                     padding: 0 0.625rem;
-                     justify-content: center;
-                     min-width: 4.063rem;
-                     text-decoration: none;" type="file">Open</button>
-                    <button style="align-items: center;
-                    background-color: #ffffdd;;
-                    border: none;
-                    border-radius: 0.1875rem;
-                    box-shadow: 0 2px 5px rgb(0 0 0 / 20%);
-                    box-sizing: border-box;
-                    color: #007d9c;
-                    cursor: pointer;
-                    display: inline-flex;
-                    font: bold 0.875rem Roboto, sans-serif;
-                    height: 1.75rem;
-                    padding: 0 0.625rem;
-                    justify-content: center;
-                    min-width: 4.063rem;
-                    text-decoration: none;" >Share</button>
+                <div id="code-button-group" >
+                    <button id="run-code" class="code-button" >Run</button>
+                    <button id="format-code" class="code-button">Format</button>
+                    <button id="open-code" class="code-button">Open</button>
+                    <button id="download-code" class="code-button">Download</button>
+                    <button id="share-code" class="code-button" >Share</button>
                 </div>
-                <div id="editor" style="height: 86%; width: 90%"></div>
+                <div id="editor" ></div>
                 </div>
               </div>              
               <div class="split right">
-                <!-- <h2>Output</h2> -->
                 <p></p>
-                <p style="height:1.75rem; padding:0 0.625rem;"></p>
-                <div style="width:96%;height:83.5%;background-color: #ffffdd;border: solid #5B6DCD 3px; padding: 5px;box-sizing: content-box;">
+                <p id="line-break" ></p>
+                <div id="textbox" >
                     <pre>
-                        <span ><p class="stdout" id="stdout">Hello world!</p></span>
+                        <span ><p class="stdout" id="stdout" >Hello world!</p></span>
                         <span ><p class="stderr" id="stderr">Program exited.</p></span>
                     </pre>
                 </div>
-                </textarea>
+                <!-- </textarea> -->
 
                 </div>
               </div>
@@ -110,9 +50,11 @@
         <script src="/static/js/ace-builds/src-noconflict/ext-language_tools.js"></script>
         <script src="/static/js/ace-builds/src-noconflict/snippets/golang.js"></script>
         <script src="static/js/ace-builds/src-noconflict/mode-golang.js"></script>
-
-        <script>
+        <script src="/static/js/main.js"></script>
+        <!-- <script>
             var editor = ace.edit("editor");
+            let input;
+            var reader;
             editor.setTheme("ace/theme/monokai");
             editor.setOptions({
                 enableLiveAutocompletion: true,
@@ -120,11 +62,52 @@
                 enableBasicAutocompletion: true
             })
             editor.session.setMode("ace/mode/golang");
-            
             var buttonFormatCode = document.querySelector("#format-code")
             var buttonRunCode = document.querySelector("#run-code")
             var buttonOpenCode = document.querySelector("#open-code")
+            var buttonDownloadCode = document.querySelector("#download-code")
+            window.onbeforeunload = function(){
+                text=editor.session.getValue()
+                window.localStorage.setItem('text',text)
+            }
+            document.addEventListener('DOMContentLoaded',function(){
+                text = window.localStorage.getItem('text')
+                if (text) {
+                    editor.session.setValue(text)
+                }
+            })
+            buttonDownloadCode.onclick = function(){
+                textValue = editor.getValue();
+                file = new Blob([textValue])
+                file.name=
+                fileLink = document.createElement('a')
+                url = URL.createObjectURL(file,{type:'.go'})
+                fileLink.href=url;
+                fileLink.download='main.go';
+                document.body.appendChild(fileLink);
+                fileLink.click()
+                setTimeout(function(){
+                   document.body.removeChild(fileLink) 
+                   window.URL.revokeObjectURL(url);  
+                },0)
+            }
             buttonOpenCode.onclick = function(){
+                console.log('open file')
+                input=document.createElement('input');
+                input.type='file'
+                input.accept = ".go"
+                input.onchange = _ => {
+                    let file = Array.from(input.files)[0];
+                    reader=new FileReader();
+                    reader.onload = _ =>{
+                        editor.session.setValue(reader.result);
+                        console.log('Set session value');
+                    }
+                    if (file){
+                        reader.readAsText(file);
+                    }
+                }
+                input.click()
                 
             }
             buttonRunCode.onclick = function(){
@@ -177,9 +160,6 @@
                     }
                 });
             }
-
-            
-        </script>
-
+        </script> -->
     </body>
 </html>

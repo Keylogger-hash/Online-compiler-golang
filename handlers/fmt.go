@@ -3,36 +3,47 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/http"
+	s "compiler.com/handlers/handlers_struct"
 	"compiler.com/utils"
 )
 
-type Response struct {
-	Res   string
-	Body string
-	Error string
-}
+
 
 func HandleFmt(wr http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "POST":
-		rsp := &Response{}
-		buf, err := io.ReadAll(r.Body)
+		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			http.Error(wr, fmt.Sprintf("%v", err), http.StatusBadRequest)
+			http.Error(wr, err.Error(), http.StatusBadRequest)
 		}
-		json.Unmarshal(buf, rsp)
-		code, err := utils.FormatFmt(rsp.Res)
+		req := &s.Request{}
+		resp := &s.Response{}
+		json.Unmarshal(body, req)
+		code, err := utils.FormatFmt(req.Body)
+		fmt.Println(string(code))
+		if err != nil {
+			wr.Header().Add("Content-type", "application/json")
+			resp.Res = ""
+			resp.Error = err.Error()
+			outputErrorJSON, _ := json.Marshal(resp)
+			wr.Write(outputErrorJSON)
+			return
+		}
+		err = utils.CheckCodePackageIsMain(code)
+		if err != nil {
+			wr.Header().Add("Content-type", "application/json")
+			resp.Res = ""
+			resp.Error = fmt.Sprintf("package not main")
+			outputMainJson, _ := json.Marshal(resp)
+			wr.Write(outputMainJson)
+			return
+		}
 		wr.Header().Add("Content-type", "application/json")
-		if err != nil {
-			rsp.Error = fmt.Sprintf("%v", err)
-		} else {
-			rsp.Res = string(code)
-			rsp.Error = ""
-		}
-		ans, err := json.Marshal(rsp)
-		fmt.Println(ans)
+		resp.Error = ""
+		resp.Res = string(code)
+		ans, err := json.Marshal(resp)
 		if err != nil {
 			http.Error(wr, fmt.Sprintf("%v", err), http.StatusBadRequest)
 		}
