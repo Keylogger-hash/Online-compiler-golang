@@ -3,6 +3,7 @@ package utils
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -116,13 +117,25 @@ func CompileCode(tmpDir string) ([]byte, error) {
 	}
 	data, err := ioutil.ReadFile(tmpDir)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	return data, nil
 
 }
 
-//
+func HashContent(body []byte) ([]byte,error) {
+	hash := sha256.New()
+	var buf bytes.Buffer
+	_, err := buf.Write(body)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := io.Copy(hash, &buf); err != nil {
+		return nil, err
+	}
+	return hash.Sum(nil), nil
+}
+
 func EncodeBinaryFile(build *BuildResults) (*bytes.Buffer, error) {
 	var buf bytes.Buffer
 	encoder := base64.NewEncoder(base64.StdEncoding, &buf)

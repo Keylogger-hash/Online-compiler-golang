@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"runtime"
 	"time"
-
 	pb "compiler.com/sandboxproto"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -118,12 +117,11 @@ func (s *Server) RunSandboxCompileCode(context context.Context, message *pb.Requ
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(decodeBytes)
+		
 	in <- decodeBytes
 
 	output, err := GetContainer(out, errC)
-	fmt.Println(output)
-	fmt.Println(err)
+	
 	if err != nil {
 		return &pb.ResponseMessage{Res: string(output), Error: err.Error()}, nil
 	}
@@ -179,36 +177,5 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed error to listen grpc server port: %v", err)
 	}
-	// ListContainers()
-	// err := buildContainer()
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// // c.Name = "8fbcde8f75bf"
-	// // file, err := os.Open("main_ed723086-f775-42e5-8cc6-5a063a0bb330")
-	// // defer file.Close()
-	// // if err != nil {
-	// // 	fmt.Println(err)
-	// // }
-	// // fileBytes, err := ioutil.ReadAll(file)
-	// // if err != nil {
-	// // 	fmt.Println(err)
-	// // }
-	// // dst := EncodeToBase64(fileBytes)
-	// // fmt.Println(dst)
-	// // b, err := DecodeBase64String(dst)
-	// // if err != nil {
-	// // 	fmt.Println(err)
-	// // }
-	// // out, err := c.StartContainer(b)
-	// // if err != nil {
-	// // 	fmt.Println(err)
-	// // }
-	// // fmt.Println(string(out))
-	// mux := http.NewServeMux()
-	// mux.HandleFunc("/", handleMain)
-	// mux.HandleFunc("/run", handleRun)
-	// fmt.Println("Starting server...")
-	// fmt.Println("Listen and serve on localhost 8081")
-	// http.ListenAndServe("localhost:8081", mux)
+	
 }

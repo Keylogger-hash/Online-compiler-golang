@@ -36,6 +36,12 @@ height: 40%; /* vertically center */
 line-height: 40%; /* vertically center */
 color: #fff;
 }
+nav a.why {
+  font-family: sans-serif;
+  height: 40%; /* vertically center */
+  line-height: 40%; /* vertically center */
+  color: #fff;
+}
 /* nav a:hover {
 background-color: #005f5f;
 }
