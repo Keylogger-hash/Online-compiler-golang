@@ -12,6 +12,8 @@ var buttonFormatCode = document.querySelector("#format-code")
 var buttonRunCode = document.querySelector("#run-code")
 var buttonOpenCode = document.querySelector("#open-code")
 var buttonDownloadCode = document.querySelector("#download-code")
+var buttonShareCode = document.querySelector("#share-code")
+var inputSnippet = document.querySelector("#share-snippet")
 window.onbeforeunload = function(){
     text=editor.session.getValue()
     stdoutContent = stdout.textContent
@@ -65,7 +67,23 @@ buttonOpenCode.onclick = function(){
         }
     }
     input.click()
-}            
+}     
+buttonShareCode.onclick = function(){
+    var text = editor.session.getValue();
+    var data = {Body: text}
+    var Data = {
+        headers:    {"Content-type":"application/json",},
+        body:   JSON.stringify(data),
+        method:"POST" 
+    }
+    fetch("/share",Data).then(response=>response.json()).then((data)=>{
+        inputSnippet.type="visible"
+        inputSnippet.value="https://localhost:8080/p/snippet/wefPWKDKDW_WF"
+        inputSnippet.select();
+        inputSnippet.setSelectionRange(0,9999);
+        navigator.clipboard.writeText(inputSnippet.value)
+    })
+}       
 buttonRunCode.onclick = function(){
     var text = editor.session.getValue();
     var stderr = document.querySelectorAll("p.stderr")[0];

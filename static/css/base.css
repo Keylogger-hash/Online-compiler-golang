@@ -83,6 +83,23 @@ cursor: default;
    padding: 5px;
    box-sizing: content-box;
 }
+.snippet {
+  align-items: center;
+  background-color: #ffffff;;
+  border: none;
+  border-radius: 0.1875rem;
+  box-shadow: 0 2px 5px rgb(0 0 0 / 20%);
+  box-sizing: border-box;
+  color: #007d9c;
+  cursor: pointer;
+  display: inline-flex;
+  font: bold 0.875rem Roboto, sans-serif;
+  height: 1.75rem;
+  padding: 0 0.625rem;
+  justify-content: center;
+  min-width: 4.063rem;
+  text-decoration: none;
+}
 .code-button {
   align-items: center;
   background-color: #ffffdd;;

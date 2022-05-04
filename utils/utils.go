@@ -3,6 +3,8 @@ package utils
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"math/big"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
@@ -123,7 +125,19 @@ func CompileCode(tmpDir string) ([]byte, error) {
 
 }
 
-func HashContent(body []byte) ([]byte,error) {
+//const salt = "/lX0§Q#8I:M8D+=Oi)Wi"
+const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
+func GenerateUID() string {
+	var s string
+	for i := 0; i < 11; i++ {
+		v, _ := rand.Int(rand.Reader, big.NewInt(62))
+		n := int(v.Int64())
+		s += string(alphabet[n])
+	}
+	return s
+}
+func HashContent(body []byte) ([]byte, error) {
 	hash := sha256.New()
 	var buf bytes.Buffer
 	_, err := buf.Write(body)

@@ -21,6 +21,7 @@ func main() {
 	mux.HandleFunc("/contacts",handlers.HandleContacts)
 	mux.HandleFunc("/about",handlers.HandleAbout)
 	mux.HandleFunc("/terms",handlers.HandleTerms)
+	mux.HandleFunc("/share",handlers.HandleShare)
 	mux.HandleFunc("/why",handlers.HandleWhy)
 	mux.HandleFunc("/fmt", handlers.HandleFmt)
 	fmt.Println("Starting server...")
