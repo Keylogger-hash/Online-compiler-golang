@@ -78,7 +78,14 @@ buttonShareCode.onclick = function(){
     }
     fetch("/share",Data).then(response=>response.json()).then((data)=>{
         inputSnippet.type="visible"
-        inputSnippet.value="https://localhost:8080/p/snippet/wefPWKDKDW_WF"
+        error = data["Error"]
+        id = data["Res"]
+        if (error !== ""){
+            inputSnippet.value=`Something went wrong. ${error}`
+
+        } else {
+            inputSnippet.value=`http://localhost:8080/share/p/${id}`
+        }
         inputSnippet.select();
         inputSnippet.setSelectionRange(0,9999);
         navigator.clipboard.writeText(inputSnippet.value)

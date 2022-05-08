@@ -97,6 +97,7 @@ cursor: default;
   height: 1.75rem;
   padding: 0 0.625rem;
   justify-content: center;
+  /* width: 20px; */
   min-width: 4.063rem;
   text-decoration: none;
 }
